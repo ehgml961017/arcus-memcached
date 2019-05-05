@@ -25,6 +25,7 @@ lib_LTLIBRARIES = ascii_scrub.la \
                   basic_engine_testsuite.la \
                   default_engine.la \
                   demo_engine.la \
+		  pmem_engine.la \
                   example_protocol.la \
                   stdin_term_handler.la
 
@@ -117,6 +118,11 @@ if INCLUDE_DEMO_ENGINE
 memcached_SOURCES += $(demo_engine_la_SOURCES)
 endif
 
+if INCLUDE_PMEM_ENGINE
+memcached_SOURCES += $(pmem_engine_la_SOURCES)
+endif
+
+
 if BUILD_ZK_INTEGRATION
 memcached_SOURCES += arcus_zk.h
 memcached_LDADD += libarcuszk.a -lzookeeper_mt
@@ -156,6 +162,18 @@ demo_engine_la_DEPENDENCIES= libmcd_util.la
 demo_engine_la_LIBADD= libmcd_util.la $(LIBM)
 demo_engine_la_LDFLAGS= -avoid-version -shared -module -no-undefined
 
+# The pmem storage engine
+pmem_engine_la_SOURCES= \
+                    engines/pmem/pmem_engine.c \
+                    engines/pmem/pmem_engine.h \
+                    engines/pmem/pm_items.c \
+                    engines/pmem/pm_items.h \
+                    engines/pmem/pm_assoc.c \
+                    engines/pmem/pm_assoc.h
+pmem_engine_la_DEPENDENCIES= libmcd_util.la
+pmem_engine_la_LIBADD= libmcd_util.la $(LIBM)
+pmem_engine_la_LDFLAGS= -avoid-version -shared -module -no-undefined -lpmemobj -lpmem
+
 if BUILD_DTRACE
 BUILT_SOURCES += memcached_dtrace.h
 CLEANFILES += memcached_dtrace.h
@@ -173,6 +191,11 @@ CLEANFILES += default_engine_dtrace.lo
 demo_engine_la_LIBADD += demo_engine_dtrace.lo
 demo_engine_la_DEPENDENCIES += demo_engine_dtrace.lo
 CLEANFILES += demo_engine_dtrace.lo
+
+pmem_engine_la_LIBADD += pmem_engine_dtrace.lo
+pmem_engine_la_DEPENDENCIES += pmem_engine_dtrace.lo
+CLEANFILES += pmem_engine_dtrace.lo
+
 endif
 
 # ASCII support for the scrub command

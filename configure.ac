@@ -223,6 +223,11 @@ AC_ARG_ENABLE(demo-engine,
   [AS_HELP_STRING([--enable-demo-engine], [Build-in demo engine])])
 AM_CONDITIONAL([INCLUDE_DEMO_ENGINE],[test "$enable_demo_engine" = "yes"])
 
+# pmem engine
+AC_ARG_ENABLE(pmem-engine,
+  [AS_HELP_STRING([--enable-pmem-engine], [Build-in pmem engine])])
+AM_CONDITIONAL([INCLUDE_PMEM_ENGINE],[test "$enable_pmem_engine" = "yes"])
+
 AC_ARG_ENABLE(dtrace,
   [AS_HELP_STRING([--enable-dtrace],[Enable dtrace probes])])
 if test "x$enable_dtrace" = "xyes"; then
