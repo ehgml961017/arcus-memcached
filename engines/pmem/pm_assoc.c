@@ -34,14 +34,6 @@ static EXTENSION_LOGGER_DESCRIPTOR *logger;
 
 //#define POOL_PATH "/home/ehgml/pmem_hashtable/hashtable_pool_file.obj"
 
-/* ISO C does not allow extra ';' outside of a function < ????
-POBJ_LAYOUT_BEGIN(HASHTABLE_POOL);
-POBJ_LAYOUT_TOID(HASHTABLE_POOL, hash_item);
-POBJ_LAYOUT_TOID(HASHTABLE_POOL, struct pm_assoc);
-POBJ_LAYOUT_TOID(HASHTABLE_POOL, TOID(hash_item));
-POBJ_LAYOUT_END(HASHTABLE_POOL);
-*/
-
 //PMEMobjpool *pop;
 
 ENGINE_ERROR_CODE pm_assoc_init(struct pmem_engine *engine)
@@ -68,9 +60,7 @@ ENGINE_ERROR_CODE pm_assoc_init(struct pmem_engine *engine)
             D_RW(assoc)->hashsize = 1024 * 1024; 
             D_RW(assoc)->hashmask = D_RO(assoc)->hashsize-1;
 
-        //D_RW(assoc)->hashtable = TX_ALLOC(TOID(TOID(hash_item)), D_RO(assoc)->hashsize);
             D_RW(assoc)->hashtable = TX_ALLOC(TOID(struct _hash_item), D_RO(assoc)->hashsize);
-        //D_RW(assoc)->hashtable = malloc(D_RO(assoc)->hashsize * sizeof(hash_item));
             if(TOID_IS_NULL(D_RO(assoc)->hashtable)) {
                 return ENGINE_ENOMEM;
             }

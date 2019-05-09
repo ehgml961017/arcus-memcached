@@ -143,7 +143,7 @@ static ENGINE_ERROR_CODE do_item_link(struct pmem_engine *engine, TOID(struct _h
 
     MEMCACHED_ITEM_LINK(key, D_RO(it)->nkey, D_RO(it)->nbytes);
 
-    TX_ADD(it);
+    //TX_ADD(it);
     /* Allocate a new CAS ID on link. */
     pm_item_set_cas(D_RO(it), get_cas_id());
 
@@ -424,7 +424,7 @@ static ENGINE_ERROR_CODE do_item_store(struct pmem_engine *engine,
             } else {
                 /*convert it to TOID it*/
                 printf("item's address in do_item_store : %p\n", (void*)&it);
-                TOID_ASSIGN(toid_it, pmemobj_oid(&it));
+                TOID_ASSIGN(toid_it, pmemobj_oid((void*)it));
                 stored = do_item_link(engine, toid_it);
             }
             if (stored == ENGINE_SUCCESS) {
@@ -516,7 +516,6 @@ ENGINE_ERROR_CODE pm_item_store(struct pmem_engine *engine,
     ENGINE_ERROR_CODE ret;
 
     pthread_mutex_lock(&engine->cache_lock);
-
     ret = do_item_store(engine, item, cas, operation, cookie);
     pthread_mutex_unlock(&engine->cache_lock);
     return ret;
