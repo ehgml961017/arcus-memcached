@@ -23,7 +23,6 @@
 #define HASHMAP_TX_OFFSET 1004
 #endif
 
-TOID_DECLARE(struct _hash_item, HASHMAP_TX_OFFSET + 1);
 
 /* hash item strtucture */
 typedef struct _hash_item {

@@ -141,13 +141,17 @@ int pm_assoc_insert(struct pmem_engine *engine, uint32_t hash, hash_item *it)
 {
     struct pm_assoc *assoc = D_RW(engine->assoc);
     uint32_t bucket = GET_HASH_BUCKET(hash, assoc->hashmask);
+    TOID(struct _hash_item) toid_it;
 
     /* shouldn't have duplicately named things defined */
     assert(pm_assoc_find(engine, hash, pm_item_get_key(it), it->nkey) == 0);
 
     it->h_next = D_RW(D_RW(assoc->hashtable)[bucket]);
     
-    TOID_ASSIGN(D_RW(assoc->hashtable)[bucket], pmemobj_oid(&it));
+    //assoc->hashtable[bucket] = it;
+    TOID_ASSIGN(toid_it, pmemobj_oid((void*)it));
+    D_RW(assoc->hashtable)[bucket] = toid_it;
+    assert(D_RW(D_RW(assoc->hashtable)[bucket]) != NULL);
     //assoc->hashtable[bucket] = it;
     assoc->hash_items++;
 

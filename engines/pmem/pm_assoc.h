@@ -21,10 +21,12 @@
 #define HASHMAP_TX_OFFSET 1004
 #endif
 
-
-TOID_DECLARE(TOID(struct _hash_item), HASHMAP_TX_OFFSET + 3);
-TOID_DECLARE(struct pm_assoc, HASHMAP_TX_OFFSET + 2);
 #define TOID_ARRAY(x) TOID(x)
+
+TOID_DECLARE(struct _hash_item, HASHMAP_TX_OFFSET + 1);
+TOID_DECLARE(TOID(struct _hash_item), HASHMAP_TX_OFFSET + 2);
+TOID_DECLARE(struct pm_assoc, HASHMAP_TX_OFFSET + 3);
+
 
 struct pm_assoc {
    uint32_t hashsize;  /* hash table size */
