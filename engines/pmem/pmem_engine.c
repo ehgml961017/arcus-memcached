@@ -138,7 +138,7 @@ Pmem_initialize(ENGINE_HANDLE* handle, const char* config_str)
     if((pop = pmemobj_open(POOL_PATH, "HASHTABLE_POOL")) == NULL) {
         pop = pmemobj_create(POOL_PATH, "HASHTABLE_POOL", 1024*1024*512, 0666);
     }
-
+    
     ENGINE_ERROR_CODE ret = initialize_configuration(se, config_str);
     if (ret != ENGINE_SUCCESS) {
         return ret;
@@ -152,6 +152,9 @@ Pmem_initialize(ENGINE_HANDLE* handle, const char* config_str)
     if (ret != ENGINE_SUCCESS) {
         return ret;
     }
+    printf("start\n");
+    pm_assoc_cleanup(se);
+    printf("clean\n");
     ret = pm_item_init(se);
     if (ret != ENGINE_SUCCESS) {
         return ret;
@@ -172,8 +175,6 @@ Pmem_destroy(ENGINE_HANDLE* handle)
         pthread_mutex_destroy(&se->stats.lock);
         free(se);
     }
-
-    //pmemobj_close(pop);
 }
 
 /*
@@ -203,7 +204,6 @@ Pmem_item_allocate(ENGINE_HANDLE* handle, const void* cookie,
         ret = ENGINE_ENOMEM;
     }
 
-    printf("success : Pmem item allocate\n");
     return ret;
 }
 

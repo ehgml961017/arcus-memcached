@@ -49,4 +49,5 @@ hash_item *       pm_assoc_find(struct pmem_engine *engine, uint32_t hash,
 int               pm_assoc_insert(struct pmem_engine *engine, uint32_t hash, hash_item *item);
 void              pm_assoc_delete(struct pmem_engine *engine, uint32_t hash,
                                const char *key, const size_t nkey);
+void              pm_assoc_cleanup(struct pmem_engine *engine);
 #endif

@@ -52,11 +52,6 @@ enum item_unlink_cause {
 static EXTENSION_LOGGER_DESCRIPTOR *logger;
 
 /*
-#define POOL_PATH "/home/ehgml/pmem_hashtable/hashtable_pool_file.obj"
-PMEMobjpool *pop;
-*/
-
-/*
  * Static functions
  */
 
@@ -134,8 +129,6 @@ static bool do_item_isvalid(struct pmem_engine *engine,
 
 static ENGINE_ERROR_CODE do_item_link(struct pmem_engine *engine, TOID(struct _hash_item) it)
 {
-    printf("nkey in do_item_link : %d\n", D_RO(it)->nkey);
-    printf("item's address in do_item_link : %p\n", (void*)&it);
     const char *key = pm_item_get_key(D_RO(it));
     size_t stotal = ITEM_stotal(engine, D_RO(it));
     assert((D_RO(it)->iflag & ITEM_LINKED) == 0);
@@ -143,7 +136,6 @@ static ENGINE_ERROR_CODE do_item_link(struct pmem_engine *engine, TOID(struct _h
 
     MEMCACHED_ITEM_LINK(key, D_RO(it)->nkey, D_RO(it)->nbytes);
 
-    //TX_ADD(it);
     /* Allocate a new CAS ID on link. */
     pm_item_set_cas(D_RO(it), get_cas_id());
 
@@ -160,8 +152,6 @@ static ENGINE_ERROR_CODE do_item_link(struct pmem_engine *engine, TOID(struct _h
     engine->stats.total_items += 1;
     pthread_mutex_unlock(&engine->stats.lock);
 
-    printf("success : do_item_link\n");
-
     return ENGINE_SUCCESS;
 }
 
@@ -171,8 +161,8 @@ static hash_item *do_item_alloc(struct pmem_engine *engine,
                                 const int flags, const rel_time_t exptime,
                                 const int nbytes, const void *cookie)
 {
-//    pop = pmemobj_open(POOL_PATH, "HASHTABLE_POOL");
     assert(pop != NULL);
+    
     TOID(struct _hash_item) it;
     size_t ntotal;
     rel_time_t real_exptime = exptime;
@@ -196,7 +186,6 @@ static hash_item *do_item_alloc(struct pmem_engine *engine,
 	}
 
         D_RW(it)->slabs_clsid = 1;
-    //assert(it->slabs_clsid == 0);
         D_RW(it)->next = D_RW(it)->prev = D_RW(it); /* special meaning: unlinked from LRU */
         D_RW(it)->h_next = 0;
         D_RW(it)->refcount = 1;     /* the caller will have a reference */
@@ -210,12 +199,10 @@ static hash_item *do_item_alloc(struct pmem_engine *engine,
         D_RW(it)->exptime = real_exptime;
         D_RW(it)->nprefix = 0;
         D_RW(it)->stored = false;
-       // do_item_link(engine, it);
+	(void) do_item_link(engine, it);
     } TX_ONABORT{
         abort();
     } TX_END
-
-    printf("success : do_item_alloc\n");
 
     return D_RW(it);
 }
@@ -334,13 +321,15 @@ static ENGINE_ERROR_CODE do_item_store(struct pmem_engine *engine,
     const char *key = pm_item_get_key(it);
     hash_item *old_it;
     hash_item *new_it = NULL;
-    TOID(struct _hash_item) toid_it;
     ENGINE_ERROR_CODE stored;
 
     old_it = do_item_get(engine, key, it->nkey, true);
 
     if (old_it != NULL) {
-        if (operation == OPERATION_ADD) {
+        if(!old_it->stored) {
+            old_it->stored = true;
+        }
+	else if (operation == OPERATION_ADD) {
             do_item_release(engine, old_it);
             return ENGINE_NOT_STORED;
         }
@@ -423,9 +412,7 @@ static ENGINE_ERROR_CODE do_item_store(struct pmem_engine *engine,
                 stored = ENGINE_SUCCESS;
             } else {
                 /*convert it to TOID it*/
-                printf("item's address in do_item_store : %p\n", (void*)&it);
-                TOID_ASSIGN(toid_it, pmemobj_oid((void*)it));
-                stored = do_item_link(engine, toid_it);
+                //stored = do_item_link(engine, toid_it);
             }
             if (stored == ENGINE_SUCCESS) {
                 *cas = pm_item_get_cas(it);
@@ -615,9 +602,6 @@ void pm_item_set_cas(const hash_item* item, uint64_t val)
 const void* pm_item_get_key(const hash_item* item)
 {
     char *ret = (void*)(item + 1);
-    printf("nkey in pm_item_get_key : %d\n", item->nkey);
-    printf("iflag in pm_item_get_key : %d\n", item->iflag);
-    printf("item's address in pm_item_get_key : %p\n", (void*)&item);
     if (item->iflag & ITEM_WITH_CAS) {
         ret += sizeof(uint64_t);
     }

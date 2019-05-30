@@ -28,32 +28,15 @@
 #include "pmem_engine.h"
 
 #define GET_HASH_BUCKET(hash, mask) ((hash) & (mask))
-//#define TOID_ARRAY(x) TOID(x)
 
 static EXTENSION_LOGGER_DESCRIPTOR *logger;
 
-//#define POOL_PATH "/home/ehgml/pmem_hashtable/hashtable_pool_file.obj"
-
-//PMEMobjpool *pop;
-
 ENGINE_ERROR_CODE pm_assoc_init(struct pmem_engine *engine)
 {
-/*    if((pop = pmemobj_open(POOL_PATH, "HASHTABLE_POOL")) == NULL) {
-        pop = pmemobj_create(POOL_PATH, "HASHTABLE_POOL", 1024*1024*512, 0666);
-    }*/
-    
-    //pop = pmemobj_create(POOL_PATH, "HASHTABLE_POOL", PMEMOBJ_MIN_POOL, 0666);
     logger = engine->server.log->get_logger();
 
-//    TOID(struct pm_assoc) assoc;
     TOID(struct pm_assoc) assoc = POBJ_ROOT(pop, struct pm_assoc);
-    //TOID(struct pm_assoc) assoc = POBJ_ROOT(pop, TOID(struct pm_assoc));
-
-//    if(TOID_IS_NULL(assoc)) {
     if(TOID_IS_NULL(D_RO(assoc)->hashtable)) {
-        printf("make assoc, hashtable\n");
-//        assoc = TX_NEW(struct pm_assoc);
-
 	TX_BEGIN(pop){
             TX_ADD(assoc);
 
@@ -65,14 +48,11 @@ ENGINE_ERROR_CODE pm_assoc_init(struct pmem_engine *engine)
                 return ENGINE_ENOMEM;
             }
         } TX_ONABORT {
-            fprintf(stderr, "%s : transaction aborted: %s\n", __func__, pmemobj_errormsg());
             abort();
         } TX_END
     }
 
     engine->assoc = assoc;
-   
-    printf("suucces : pm_assoc_init\n");
 
     logger->log(EXTENSION_LOG_INFO, NULL, "PMEM ASSOC module initialized.\n");
     return ENGINE_SUCCESS;
@@ -111,25 +91,12 @@ hash_item *pm_assoc_find(struct pmem_engine *engine, uint32_t hash,
 
     uint32_t bucket = GET_HASH_BUCKET(hash, assoc->hashmask);
 
-    /*
-    while ((curr = assoc->hashtable[bucket]) != NULL) {
-        if (nkey == curr->nkey && hash == curr->hval &&
-            memcmp(key, dm_item_get_key(curr), nkey) == 0)
-            break;
-        curr = curr->h_next;
-    }*/
-
-    //hash_item *hashtable = D_RW(assoc->hashtable);
-
-    printf("this point is find, before while\n");
     while ((curr = D_RW(D_RW(assoc->hashtable)[bucket])) != NULL) {
-        printf("entering while\n");
         if (nkey == curr->nkey && hash == curr->hval &&
             memcmp(key, pm_item_get_key(curr), nkey) == 0)
             break;
         curr = curr->h_next;
     }
-    printf("out of while\n");
 
     MEMCACHED_ASSOC_FIND(key, nkey, depth);
     return curr;
@@ -148,14 +115,10 @@ int pm_assoc_insert(struct pmem_engine *engine, uint32_t hash, hash_item *it)
 
     it->h_next = D_RW(D_RW(assoc->hashtable)[bucket]);
     
-    //assoc->hashtable[bucket] = it;
     TOID_ASSIGN(toid_it, pmemobj_oid((void*)it));
     D_RW(assoc->hashtable)[bucket] = toid_it;
     assert(D_RW(D_RW(assoc->hashtable)[bucket]) != NULL);
-    //assoc->hashtable[bucket] = it;
     assoc->hash_items++;
-
-    printf("success : pm_assoc_insert\n");
 
     MEMCACHED_ASSOC_INSERT(pm_item_get_key(it), it->nkey, assoc->hash_items);
     return 1;
@@ -186,3 +149,37 @@ void pm_assoc_delete(struct pmem_engine *engine, uint32_t hash,
     }
 
 }*/
+
+void pm_assoc_cleanup(struct pmem_engine *engine)
+{
+    struct pm_assoc *assoc = D_RW(engine->assoc);
+    hash_item *prev;
+    hash_item *curr;
+    hash_item *next;
+    TOID(struct _hash_item) it;
+
+    for(int ii=0; ii < assoc->hashsize; ++ii) {
+        if((curr = D_RW(D_RW(assoc->hashtable)[ii])) != NULL) {
+            prev = NULL;
+	    while(curr != NULL) {
+                if(curr->stored) {
+                    printf("go next\n");
+                    prev = curr;
+                    curr = curr->h_next;
+                } else {
+                    printf("delete");
+                    if(prev == NULL)
+                        TOID_ASSIGN(D_RW(assoc->hashtable)[ii], pmemobj_oid((void*)curr->h_next));
+		    else
+                        prev->h_next = curr->h_next;
+                    next = curr->h_next;
+		    printf("curr : %d", curr->nkey);
+		    TOID_ASSIGN(it, pmemobj_oid((void*)curr));
+                    POBJ_FREE(&it);
+		    curr = next;
+                    assoc->hash_items--;
+		}
+	    }
+	}
+    }
+}
